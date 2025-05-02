@@ -4,10 +4,15 @@ import { Button } from '@/components/ui/button';
 import Icon from '@/components/ui/icon';
 
 type Team = 'pink' | 'purple' | 'orange' | 'mint';
+type GameMode = 'mobile' | 'desktop';
 
 interface CapybaraGameProps {
   team: Team;
   onScorePoint: () => void;
+  playerName: string;
+  teammateNames: string[];
+  opponentNames: string[];
+  gameMode: GameMode;
 }
 
 interface Position {
@@ -18,6 +23,7 @@ interface Position {
 interface Capybara {
   team: Team;
   position: Position;
+  name: string;
   isPlayer?: boolean;
 }
 
@@ -25,31 +31,41 @@ const COURT_WIDTH = 600;
 const COURT_HEIGHT = 400;
 const NET_HEIGHT = 60;
 
-const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
+const CapybaraGame: React.FC<CapybaraGameProps> = ({ 
+  team, 
+  onScorePoint, 
+  playerName, 
+  teammateNames, 
+  opponentNames, 
+  gameMode 
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ball, setBall] = useState<Position>({ x: COURT_WIDTH / 2, y: 50 });
   const [ballVelocity, setBallVelocity] = useState<Position>({ x: 0, y: 3 });
   const [playerCapybara, setPlayerCapybara] = useState<Position>({ x: COURT_WIDTH / 4, y: COURT_HEIGHT - 50 });
   const [teammates, setTeammates] = useState<Capybara[]>([
-    { team, position: { x: COURT_WIDTH / 4 - 80, y: COURT_HEIGHT - 50 } },
-    { team, position: { x: COURT_WIDTH / 4 + 80, y: COURT_HEIGHT - 50 } },
+    { team, position: { x: COURT_WIDTH / 4 - 80, y: COURT_HEIGHT - 50 }, name: teammateNames[0] },
+    { team, position: { x: COURT_WIDTH / 4 + 80, y: COURT_HEIGHT - 50 }, name: teammateNames[1] },
   ]);
+  
+  // Choose random teams for opponents
+  const getRandomOpposingTeam = (playerTeam: Team): Team => {
+    const teams: Team[] = ['pink', 'purple', 'orange', 'mint'];
+    const opposingTeams = teams.filter(t => t !== playerTeam);
+    return opposingTeams[Math.floor(Math.random() * opposingTeams.length)];
+  };
+  
   const [opponents, setOpponents] = useState<Capybara[]>([
-    // We'll choose a random opposing team
-    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3 - 80, y: COURT_HEIGHT - 50 } },
-    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3, y: COURT_HEIGHT - 50 } },
-    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3 + 80, y: COURT_HEIGHT - 50 } },
+    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3 - 80, y: COURT_HEIGHT - 50 }, name: opponentNames[0] },
+    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3, y: COURT_HEIGHT - 50 }, name: opponentNames[1] },
+    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3 + 80, y: COURT_HEIGHT - 50 }, name: opponentNames[2] },
   ]);
+  
   const [score, setScore] = useState({ player: 0, opponent: 0 });
   const [gameMessage, setGameMessage] = useState('');
   const animationRef = useRef<number>();
   const [lastPress, setLastPress] = useState<string | null>(null);
-
-  function getRandomOpposingTeam(playerTeam: Team): Team {
-    const teams: Team[] = ['pink', 'purple', 'orange', 'mint'];
-    const opposingTeams = teams.filter(t => t !== playerTeam);
-    return opposingTeams[Math.floor(Math.random() * opposingTeams.length)];
-  }
+  const [touchPosition, setTouchPosition] = useState<Position | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -90,17 +106,17 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
       context.lineTo((COURT_WIDTH / 4) * 3, COURT_HEIGHT - 5);
       context.stroke();
 
-      // Draw player capybara
-      drawCapybara(context, playerCapybara.x, playerCapybara.y, team, true);
+      // Draw player capybara with name
+      drawCapybara(context, playerCapybara.x, playerCapybara.y, team, true, playerName);
       
-      // Draw teammates
+      // Draw teammates with names
       teammates.forEach(capybara => {
-        drawCapybara(context, capybara.position.x, capybara.position.y, capybara.team);
+        drawCapybara(context, capybara.position.x, capybara.position.y, capybara.team, false, capybara.name);
       });
       
-      // Draw opponents
+      // Draw opponents with names
       opponents.forEach(capybara => {
-        drawCapybara(context, capybara.position.x, capybara.position.y, capybara.team);
+        drawCapybara(context, capybara.position.x, capybara.position.y, capybara.team, false, capybara.name);
       });
       
       // Draw ball
@@ -120,13 +136,43 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
         context.fillText(gameMessage, COURT_WIDTH / 2, COURT_HEIGHT / 2);
         context.textAlign = 'start';
       }
+      
+      // Draw touch controls for mobile mode
+      if (gameMode === 'mobile') {
+        // Left control
+        context.fillStyle = 'rgba(0,0,0,0.2)';
+        context.beginPath();
+        context.arc(50, COURT_HEIGHT - 50, 30, 0, Math.PI * 2);
+        context.fill();
+        
+        // Right control
+        context.beginPath();
+        context.arc(150, COURT_HEIGHT - 50, 30, 0, Math.PI * 2);
+        context.fill();
+        
+        // Jump/hit control
+        context.beginPath();
+        context.arc(COURT_WIDTH - 80, COURT_HEIGHT - 50, 40, 0, Math.PI * 2);
+        context.fill();
+        
+        // Arrows/icons
+        context.fillStyle = 'white';
+        context.font = '16px Arial';
+        context.textAlign = 'center';
+        context.fillText('←', 50, COURT_HEIGHT - 45);
+        context.fillText('→', 150, COURT_HEIGHT - 45);
+        context.fillText('↑', COURT_WIDTH - 80, COURT_HEIGHT - 45);
+        context.textAlign = 'start';
+      }
     };
 
     render();
-  }, [ball, playerCapybara, teammates, opponents, score, team, gameMessage]);
+  }, [ball, playerCapybara, teammates, opponents, score, team, gameMessage, gameMode, playerName]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (gameMode !== 'desktop') return; // Only use keyboard in desktop mode
+      
       setLastPress(e.key);
       
       // Player movement
@@ -160,7 +206,69 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [playerCapybara, ball]);
+  }, [playerCapybara, ball, gameMode]);
+
+  // Touch controls for mobile mode
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (gameMode !== 'mobile') return; // Only use touch in mobile mode
+      
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+      const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+      
+      setTouchPosition({ x, y });
+      
+      // Left control
+      if (distance({ x, y }, { x: 50, y: COURT_HEIGHT - 50 }) < 30) {
+        setPlayerCapybara(prev => ({
+          ...prev,
+          x: Math.max(prev.x - 20, 20)
+        }));
+      }
+      
+      // Right control
+      if (distance({ x, y }, { x: 150, y: COURT_HEIGHT - 50 }) < 30) {
+        setPlayerCapybara(prev => ({
+          ...prev,
+          x: Math.min(prev.x + 20, COURT_WIDTH / 2 - 20)
+        }));
+      }
+      
+      // Jump/hit control
+      if (distance({ x, y }, { x: COURT_WIDTH - 80, y: COURT_HEIGHT - 50 }) < 40) {
+        if (Math.abs(playerCapybara.x - ball.x) < 50 && Math.abs(playerCapybara.y - ball.y) < 70) {
+          // Hit the ball
+          const dx = (ball.x - playerCapybara.x) / 5;
+          const dy = -8; // Upward velocity
+          setBallVelocity({ x: dx, y: dy });
+          
+          // Show message
+          setGameMessage('Отличный удар!');
+          setTimeout(() => setGameMessage(''), 1000);
+        }
+      }
+    };
+    
+    const handleTouchEnd = () => {
+      setTouchPosition(null);
+    };
+    
+    if (gameMode === 'mobile') {
+      canvas.addEventListener('touchstart', handleTouchStart);
+      canvas.addEventListener('touchend', handleTouchEnd);
+    }
+    
+    return () => {
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [gameMode, playerCapybara, ball]);
 
   useEffect(() => {
     // Game loop for ball physics and game logic
@@ -258,7 +366,8 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
     x: number, 
     y: number, 
     capybaraTeam: Team,
-    isPlayer = false
+    isPlayer = false,
+    name: string
   ) => {
     const colors = {
       pink: '#FF69B4',
@@ -266,6 +375,13 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
       orange: '#FF7F50',
       mint: '#98FB98'
     };
+    
+    // Draw the name above the capybara
+    ctx.fillStyle = '#000';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, x, y - 45);
+    ctx.textAlign = 'start';
     
     // Body
     ctx.fillStyle = colors[capybaraTeam];
@@ -324,6 +440,11 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
     ctx.stroke();
   };
 
+  // Helper function to calculate distance between two points
+  const distance = (point1: Position, point2: Position): number => {
+    return Math.sqrt(Math.pow(point2.x - point1.x, 2) + Math.pow(point2.y - point1.y, 2));
+  };
+
   return (
     <div className="flex flex-col items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-lg p-4 mb-4">
@@ -333,34 +454,43 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({ team, onScorePoint }) => {
           <span>Ты играешь за {getTeamNameRussian(team)} команду</span>
         </div>
         
-        <div className="mb-4">
-          <p className="text-sm text-gray-700">Управление:</p>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex items-center">
-              <span className="bg-gray-200 px-2 py-1 rounded mr-2">←</span>
-              <span>Влево</span>
-            </div>
-            <div className="flex items-center">
-              <span className="bg-gray-200 px-2 py-1 rounded mr-2">→</span>
-              <span>Вправо</span>
-            </div>
-            <div className="flex items-center">
-              <span className="bg-gray-200 px-2 py-1 rounded mr-2">Пробел</span>
-              <span>Ударить мяч</span>
+        {gameMode === 'desktop' ? (
+          <div className="mb-4">
+            <p className="text-sm text-gray-700">Управление (режим компьютера):</p>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="flex items-center">
+                <span className="bg-gray-200 px-2 py-1 rounded mr-2">←</span>
+                <span>Влево</span>
+              </div>
+              <div className="flex items-center">
+                <span className="bg-gray-200 px-2 py-1 rounded mr-2">→</span>
+                <span>Вправо</span>
+              </div>
+              <div className="flex items-center">
+                <span className="bg-gray-200 px-2 py-1 rounded mr-2">Пробел</span>
+                <span>Ударить мяч</span>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mb-4">
+            <p className="text-sm text-gray-700">Управление (мобильный режим):</p>
+            <p className="text-xs text-gray-600">Используйте кнопки на экране для перемещения и удара</p>
+          </div>
+        )}
         
-        <div className="bg-gray-100 rounded p-2 text-sm">
-          <p>Последняя нажатая клавиша: {lastPress || "Нет"}</p>
-        </div>
+        {gameMode === 'desktop' && (
+          <div className="bg-gray-100 rounded p-2 text-sm">
+            <p>Последняя нажатая клавиша: {lastPress || "Нет"}</p>
+          </div>
+        )}
       </div>
       
       <canvas 
         ref={canvasRef} 
         width={COURT_WIDTH} 
         height={COURT_HEIGHT}
-        className="border border-gray-300 rounded-lg shadow-md"
+        className="border border-gray-300 rounded-lg shadow-md touch-manipulation"
       />
       
       <div className="mt-4 text-center">

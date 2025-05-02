@@ -8,9 +8,13 @@ import CapybaraGame from '@/components/CapybaraGame';
 import TeamSelection from '@/components/TeamSelection';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/components/ui/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 type Team = 'pink' | 'purple' | 'orange' | 'mint';
 type GameState = 'selection' | 'game';
+type GameMode = 'mobile' | 'desktop';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState>('selection');
@@ -18,7 +22,11 @@ const Index = () => {
   const [capybaraName, setCapybaraName] = useState('');
   const [customUltraPower, setCustomUltraPower] = useState('');
   const [powerMeter, setPowerMeter] = useState(0);
+  const [teammateNames] = useState(['Капи', 'Бара']);
+  const [opponentNames] = useState(['Водяной', 'Пушистик', 'Плюшка']);
   const { toast } = useToast();
+  const isMobileDevice = useIsMobile();
+  const [gameMode, setGameMode] = useState<GameMode>(isMobileDevice ? 'mobile' : 'desktop');
 
   const handleStartGame = () => {
     if (!capybaraName) {
@@ -73,6 +81,10 @@ const Index = () => {
     setPowerMeter(0);
   };
 
+  const toggleGameMode = () => {
+    setGameMode(prev => prev === 'mobile' ? 'desktop' : 'mobile');
+  };
+
   if (gameState === 'selection') {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-100 to-gray-200 p-4">
@@ -99,6 +111,17 @@ const Index = () => {
             <p className="text-xs text-gray-500">Оставьте пустым для использования способности по умолчанию.</p>
           </div>
           
+          <div className="flex items-center space-x-2">
+            <Switch 
+              checked={gameMode === 'mobile'} 
+              onCheckedChange={toggleGameMode}
+              id="game-mode"
+            />
+            <Label htmlFor="game-mode">
+              {gameMode === 'mobile' ? 'Мобильный режим' : 'Режим компьютера'}
+            </Label>
+          </div>
+          
           <Button 
             className="w-full" 
             onClick={handleStartGame}
@@ -118,10 +141,20 @@ const Index = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="p-4 bg-gray-800 text-white flex justify-between items-center">
+      <div className="p-4 bg-gray-800 text-white flex justify-between items-center flex-wrap">
         <div className="flex items-center gap-2">
           <span className="font-bold">{capybaraName}</span>
           <span className="text-sm">({getTeamNameRussian(selectedTeam)} команда)</span>
+        </div>
+        <div className="flex items-center gap-2 ml-auto mr-4">
+          <Switch 
+            checked={gameMode === 'mobile'} 
+            onCheckedChange={toggleGameMode}
+            id="game-mode-toggle"
+          />
+          <Label htmlFor="game-mode-toggle" className="text-sm whitespace-nowrap">
+            {gameMode === 'mobile' ? 'Мобильный режим' : 'Режим компьютера'}
+          </Label>
         </div>
         <div className="flex items-center gap-4">
           <div className="flex-1 flex items-center gap-2" style={{ minWidth: '200px' }}>
@@ -160,6 +193,10 @@ const Index = () => {
       <CapybaraGame 
         team={selectedTeam} 
         onScorePoint={() => setPowerMeter(prev => Math.min(prev + 20, 100))}
+        playerName={capybaraName}
+        teammateNames={teammateNames}
+        opponentNames={opponentNames}
+        gameMode={gameMode}
       />
     </div>
   );
