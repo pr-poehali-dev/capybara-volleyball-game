@@ -5,6 +5,8 @@ import Icon from '@/components/ui/icon';
 
 type Team = 'pink' | 'purple' | 'orange' | 'mint';
 type GameMode = 'mobile' | 'desktop';
+type Gender = 'male' | 'female';
+type CoatColor = 'normal' | 'albino' | 'dark' | 'black';
 
 interface CapybaraGameProps {
   team: Team;
@@ -13,6 +15,8 @@ interface CapybaraGameProps {
   teammateNames: string[];
   opponentNames: string[];
   gameMode: GameMode;
+  gender: Gender;
+  coatColor: CoatColor;
 }
 
 interface Position {
@@ -24,6 +28,8 @@ interface Capybara {
   team: Team;
   position: Position;
   name: string;
+  gender: Gender;
+  coatColor: CoatColor;
   isPlayer?: boolean;
 }
 
@@ -37,15 +43,39 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
   playerName, 
   teammateNames, 
   opponentNames, 
-  gameMode 
+  gameMode,
+  gender,
+  coatColor
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ball, setBall] = useState<Position>({ x: COURT_WIDTH / 2, y: 50 });
   const [ballVelocity, setBallVelocity] = useState<Position>({ x: 0, y: 3 });
   const [playerCapybara, setPlayerCapybara] = useState<Position>({ x: COURT_WIDTH / 4, y: COURT_HEIGHT - 50 });
+  
+  // Random gender generator for NPCs
+  const randomGender = (): Gender => Math.random() > 0.5 ? 'male' : 'female';
+  
+  // Random coat color generator for NPCs
+  const randomCoatColor = (): CoatColor => {
+    const colors: CoatColor[] = ['normal', 'albino', 'dark', 'black'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+  
   const [teammates, setTeammates] = useState<Capybara[]>([
-    { team, position: { x: COURT_WIDTH / 4 - 80, y: COURT_HEIGHT - 50 }, name: teammateNames[0] },
-    { team, position: { x: COURT_WIDTH / 4 + 80, y: COURT_HEIGHT - 50 }, name: teammateNames[1] },
+    { 
+      team, 
+      position: { x: COURT_WIDTH / 4 - 80, y: COURT_HEIGHT - 50 }, 
+      name: teammateNames[0],
+      gender: randomGender(),
+      coatColor: randomCoatColor()
+    },
+    { 
+      team, 
+      position: { x: COURT_WIDTH / 4 + 80, y: COURT_HEIGHT - 50 }, 
+      name: teammateNames[1],
+      gender: randomGender(),
+      coatColor: randomCoatColor()
+    },
   ]);
   
   // Choose random teams for opponents
@@ -56,9 +86,27 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
   };
   
   const [opponents, setOpponents] = useState<Capybara[]>([
-    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3 - 80, y: COURT_HEIGHT - 50 }, name: opponentNames[0] },
-    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3, y: COURT_HEIGHT - 50 }, name: opponentNames[1] },
-    { team: getRandomOpposingTeam(team), position: { x: (COURT_WIDTH / 4) * 3 + 80, y: COURT_HEIGHT - 50 }, name: opponentNames[2] },
+    { 
+      team: getRandomOpposingTeam(team), 
+      position: { x: (COURT_WIDTH / 4) * 3 - 80, y: COURT_HEIGHT - 50 }, 
+      name: opponentNames[0],
+      gender: randomGender(),
+      coatColor: randomCoatColor()
+    },
+    { 
+      team: getRandomOpposingTeam(team), 
+      position: { x: (COURT_WIDTH / 4) * 3, y: COURT_HEIGHT - 50 }, 
+      name: opponentNames[1],
+      gender: randomGender(),
+      coatColor: randomCoatColor()
+    },
+    { 
+      team: getRandomOpposingTeam(team), 
+      position: { x: (COURT_WIDTH / 4) * 3 + 80, y: COURT_HEIGHT - 50 }, 
+      name: opponentNames[2],
+      gender: randomGender(),
+      coatColor: randomCoatColor()
+    },
   ]);
   
   const [score, setScore] = useState({ player: 0, opponent: 0 });
@@ -107,16 +155,43 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
       context.stroke();
 
       // Draw player capybara with name
-      drawCapybara(context, playerCapybara.x, playerCapybara.y, team, true, playerName);
+      drawCapybara(
+        context, 
+        playerCapybara.x, 
+        playerCapybara.y, 
+        team, 
+        true, 
+        playerName,
+        gender,
+        coatColor
+      );
       
       // Draw teammates with names
       teammates.forEach(capybara => {
-        drawCapybara(context, capybara.position.x, capybara.position.y, capybara.team, false, capybara.name);
+        drawCapybara(
+          context, 
+          capybara.position.x, 
+          capybara.position.y, 
+          capybara.team, 
+          false, 
+          capybara.name,
+          capybara.gender,
+          capybara.coatColor
+        );
       });
       
       // Draw opponents with names
       opponents.forEach(capybara => {
-        drawCapybara(context, capybara.position.x, capybara.position.y, capybara.team, false, capybara.name);
+        drawCapybara(
+          context, 
+          capybara.position.x, 
+          capybara.position.y, 
+          capybara.team, 
+          false, 
+          capybara.name,
+          capybara.gender,
+          capybara.coatColor
+        );
       });
       
       // Draw ball
@@ -167,7 +242,7 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
     };
 
     render();
-  }, [ball, playerCapybara, teammates, opponents, score, team, gameMessage, gameMode, playerName]);
+  }, [ball, playerCapybara, teammates, opponents, score, team, gameMessage, gameMode, playerName, gender, coatColor]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -361,21 +436,36 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
     };
   }, [ball, ballVelocity, onScorePoint]);
 
+  // Get color for capybara based on team and coat color
+  const getCapybaraColor = (capybaraTeam: Team, coat: CoatColor): string => {
+    if (coat === 'normal') {
+      // Team color for normal coat
+      return capybaraTeam === 'pink' ? '#FF69B4' : 
+             capybaraTeam === 'purple' ? '#8A2BE2' : 
+             capybaraTeam === 'orange' ? '#FF7F50' : 
+             '#98FB98';
+    } else if (coat === 'albino') {
+      return '#FFF0E0';
+    } else if (coat === 'dark') {
+      return '#8B4513';
+    } else if (coat === 'black') {
+      return '#333333';
+    }
+    
+    // Fallback
+    return '#8B4513';
+  };
+
   const drawCapybara = (
     ctx: CanvasRenderingContext2D, 
     x: number, 
     y: number, 
     capybaraTeam: Team,
     isPlayer = false,
-    name: string
+    name: string,
+    capybaraGender: Gender,
+    capybaraCoat: CoatColor
   ) => {
-    const colors = {
-      pink: '#FF69B4',
-      purple: '#8A2BE2',
-      orange: '#FF7F50',
-      mint: '#98FB98'
-    };
-    
     // Draw the name above the capybara
     ctx.fillStyle = '#000';
     ctx.font = '12px Arial';
@@ -383,8 +473,11 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
     ctx.fillText(name, x, y - 45);
     ctx.textAlign = 'start';
     
+    // Get color based on coat type
+    const capybaraColor = getCapybaraColor(capybaraTeam, capybaraCoat);
+    
     // Body
-    ctx.fillStyle = colors[capybaraTeam];
+    ctx.fillStyle = capybaraColor;
     ctx.beginPath();
     ctx.ellipse(x, y, 25, 20, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -403,7 +496,46 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
     ctx.ellipse(x, y - 28, 2, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     
+    // Eyelashes for female capybaras
+    if (capybaraGender === 'female') {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#000';
+      
+      // Left eye eyelashes
+      ctx.beginPath();
+      ctx.moveTo(x - 12, y - 30);
+      ctx.lineTo(x - 14, y - 32);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(x - 10, y - 30);
+      ctx.lineTo(x - 10, y - 33);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(x - 8, y - 30);
+      ctx.lineTo(x - 6, y - 32);
+      ctx.stroke();
+      
+      // Right eye eyelashes
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y - 30);
+      ctx.lineTo(x - 4, y - 32);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(x, y - 30);
+      ctx.lineTo(x, y - 33);
+      ctx.stroke();
+      
+      ctx.beginPath();
+      ctx.moveTo(x + 2, y - 30);
+      ctx.lineTo(x + 4, y - 32);
+      ctx.stroke();
+    }
+    
     // Nose
+    ctx.fillStyle = '#000';
     ctx.beginPath();
     ctx.ellipse(x - 5, y - 22, 3, 2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -452,6 +584,12 @@ const CapybaraGame: React.FC<CapybaraGameProps> = ({
         <div className="flex items-center gap-2 mb-4">
           <div className={`w-4 h-4 rounded-full`} style={{ backgroundColor: getTeamColor(team) }}></div>
           <span>Ты играешь за {getTeamNameRussian(team)} команду</span>
+        </div>
+        
+        <div className="flex items-center gap-2 mb-4">
+          <span>Твоя капибара:</span>
+          <span>{gender === 'male' ? 'мужской' : 'женский'} пол,</span>
+          <span>окрас: {getCoatColorName(coatColor)}</span>
         </div>
         
         {gameMode === 'desktop' ? (
@@ -515,6 +653,15 @@ const getTeamNameRussian = (team: Team): string => {
     case 'purple': return 'фиолетовую';
     case 'orange': return 'оранжевую';
     case 'mint': return 'мятную';
+  }
+};
+
+const getCoatColorName = (color: CoatColor): string => {
+  switch (color) {
+    case 'normal': return 'обычный';
+    case 'albino': return 'альбинос';
+    case 'dark': return 'темный';
+    case 'black': return 'черный';
   }
 };
 
